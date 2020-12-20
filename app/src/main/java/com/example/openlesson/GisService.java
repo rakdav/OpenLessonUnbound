@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.os.AsyncTask;
+import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 import android.widget.Toast;
@@ -23,43 +24,58 @@ import java.net.URLConnection;
 import java.util.Scanner;
 
 public class GisService extends Service {
+    private static String LOG_TAG = "WeatherService";
     public static final String CHANNEL = "GIS_SERVICE";
     public static final String INFO = "INFO";
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        Toast.makeText(this, "Служба создана", Toast.LENGTH_SHORT).show();
+    private final IBinder binder = new LocalBinder();
+    public class LocalBinder extends Binder {
+        GisService getService(){
+            return GisService.this;
+        }
     }
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        Toast.makeText(this, "Служба запущена", Toast.LENGTH_SHORT).show();
-        // создаем объект нашего AsyncTask (необходимо для работы с сетью)
-        GisAsyncTask t = new GisAsyncTask();
-        t.execute(); // запускаем AsyncTask
-        return START_NOT_STICKY;
-    }
-
-    @Override
-    public void onDestroy() {
-        Toast.makeText(this, "Служба остановлена", Toast.LENGTH_SHORT).show();
+    public GisService() {
     }
 
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        Log.i(LOG_TAG,"onBind");
+        return binder;
     }
 
-    private class GisAsyncTask extends AsyncTask<Void,Void,String>
+    @Override
+    public void onRebind(Intent intent) {
+        Log.i(LOG_TAG, "onRebind");
+        super.onRebind(intent);
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        Log.i(LOG_TAG, "onDestroy");
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+        Log.i(LOG_TAG, "onUnbind");
+        return true;
+    }
+
+    public void getWheather(int tid)
+    {
+        GisAsyncTask t = new GisAsyncTask();
+        t.execute(tid);
+    }
+
+    private class GisAsyncTask extends AsyncTask<Integer,Void,String>
     {
         @Override
-        protected String doInBackground(Void... voids) {
+        protected String doInBackground(Integer... voids) {
             String result="";
             try {
                 //загружаем данные URL
 
-                URL url = new URL("http://icomms.ru/inf/meteo.php?tid=24");
+                URL url = new URL("http://icomms.ru/inf/meteo.php?tid="+voids[0]);
                 // ”оборачиваем” для удобства четния
                 URLConnection urlc = url.openConnection();
                 BufferedReader buffer = new BufferedReader(new InputStreamReader(urlc.getInputStream(), "UTF8"));
@@ -88,4 +104,6 @@ public class GisService extends Service {
             sendBroadcast(i); //
         }
     }
+
+
 }
